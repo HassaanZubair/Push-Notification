@@ -1,26 +1,34 @@
-const express = require("express");
+const express = require('express');
 const router = express.Router();
-const client = require("../config/db");
 
-// Save Firebase credentials
-router.post("/", async (req, res) => {
-
+router.post('/', async (req, res) => {
+  const db = req.app.locals.db;
   const { firebase_project_id, firebase_private_key, firebase_client_email } = req.body;
-  const result = await client.query(`
 
-    INSERT INTO settings(firebase_project_id, firebase_private_key, firebase_client_email)
-    VALUES($1, $2, $3) RETURNING *`,
+  if (!firebase_project_id || !firebase_private_key || !firebase_client_email) {
+    return res.status(400).json({ message: 'All Firebase settings are required' });
+  }
 
-    [firebase_project_id, firebase_private_key, firebase_client_email]
-  );
-  res.json(result.rows[0]);
+  try {
+    const result = await db.query(
+      'INSERT INTO settings(firebase_project_id, firebase_private_key, firebase_client_email) VALUES($1, $2, $3) RETURNING *',
+      [firebase_project_id, firebase_private_key, firebase_client_email]
+    );
+    res.status(201).json({ message: 'Settings saved', data: result.rows[0] });
+  } catch (err) {
+    console.error('Error saving settings:', err);
+    res.status(500).json({ message: 'Error saving settings' });
+  }
 });
 
-// Get all
-
-router.get("/", async (req, res) => {
-  const result = await client.query("SELECT * FROM settings");
-  res.json(result.rows);
+router.get('/', async (req, res) => {
+  const db = req.app.locals.db;
+  try {
+    const result = await db.query('SELECT * FROM settings');
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ message: 'Error fetching settings' });
+  }
 });
 
 module.exports = router;
