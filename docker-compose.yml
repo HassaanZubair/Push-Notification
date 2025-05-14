@@ -1,0 +1,41 @@
+services:
+  db:
+    image: postgres
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: pushdb
+    ports:
+      - "5433:5432"
+    volumes:
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+      - "8080:8080"
+
+  my_rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"      # RabbitMQ (backend)
+      - "15672:15672"    # RabbitMQ UI
+    restart: always
+
+  app:
+    build: .
+    depends_on:
+      - db
+      - my_rabbitmq
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+
+  consumer:
+    build: .
+    depends_on:
+      - my_rabbitmq
+    command: node rabbitmq/consumer.js

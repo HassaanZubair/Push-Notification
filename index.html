@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+    <title>Push Notification</title>
+  
+  <script type="module">
+        
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.0.2/firebase-app.js";
+        import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/9.0.2/firebase-messaging.js";
+
+        const firebaseConfig = {
+        
+            apiKey: "AIzaSyARqlr1seX_FbF_Kxm6byPHpVkI1dSVzQ0",
+            authDomain: "push-notification-d25c5.firebaseapp.com",
+            projectId: "push-notification-d25c5",
+            storageBucket: "push-notification-d25c5.firebasestorage.app",
+            messagingSenderId: "179985074851",
+            appId: "1:179985074851:web:df53504a25c55f85f58d16",
+            measurementId: "G-DEYNL3WR8Y"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const messaging = getMessaging(app);
+
+        // Register the service worker
+        
+        if ('serviceWorker' in navigator) {
+           
+            navigator.serviceWorker.register('/firebase-messaging-sw.js')
+                .then(function(registration) {
+                    console.log('Service Worker registered with scope:', registration.scope);
+                })
+                
+                .catch(function(error) {
+                    console.log('Service Worker registration failed:', error);
+                });
+        }
+
+        // Request permission to send notifications
+        Notification.requestPermission().then(function(permission) {
+            if (permission === 'granted') {
+                console.log('Notification permission granted.');
+
+                getToken(messaging, {
+                    vapidKey: "BMXJCsulNAnU9WLtxdcdiwkLbnlI2zyfJSCL4GQkUfECkP7FgHlmoqQyEVFiziuyvTNeY6wEWmz3t2k8a56L250"
+                }).then(function(currentToken) {
+              
+                    if (currentToken) {
+                        console.log('Device Token:', currentToken);
+
+                        // Send token to backend on button click
+                        document.getElementById('sendPushButton').addEventListener('click', function() {
+                            console.log('Sending push notification...');
+                            // Send token to your backend
+                            fetch("http://localhost:3000/devices", {  // Changed endpoint to '/devices' for saving token
+                                method: "POST",
+                                headers: {
+                                    "Content-Type": "application/json",
+                                },
+                                body: JSON.stringify({
+                                    token: currentToken,
+                                    type: "web", // Add type as web or any other type
+                                }),
+                            })
+                            .then(res => res.json())
+                            .then(data => {
+                                console.log('Token saved successfully:', data);
+                                // Now send the push notification
+                                fetch("http://localhost:3000/send-notification", {
+                                    method: "POST",
+                                    headers: {
+                                        "Content-Type": "application/json",
+                                    },
+                                    body: JSON.stringify({
+                                        token: currentToken,
+                                        title: "Your Notification Title",
+                                        body: "Your notification body",
+                                    }),
+                                })
+                                .then(res => res.json())
+                                .then(data => {
+                                    console.log('Notification sent successfully:', data);
+                                })
+                                .catch(error => {
+                                    console.error('Error sending notification:', error);
+                                });
+                            })
+                            .catch(error => {
+                                console.error('Error saving token:', error);
+                            });
+                        });
+                    } else {
+                        console.log('No registration token available.');
+                    }
+                }).catch(function(err) {
+                    console.log('Error getting device token:', err);
+                });
+
+            } 
+            else {
+                console.log('Notification permission denied.');
+            }
+        }).catch(function(err) {
+            console.log('Permission request failed:', err);
+        });
+    </script>
+</head>
+<body>
+    <h1>Push Notification Test</h1>
+    <button id="sendPushButton">Send Push</button>
+</body>
+</html>

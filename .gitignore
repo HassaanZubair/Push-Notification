@@ -1,0 +1,4 @@
+.env
+node_modules/
+firebase/
+push-notification-d25c5-firebase-adminsdk-fbsvc-1fba843a95.json
